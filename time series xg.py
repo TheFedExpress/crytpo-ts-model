@@ -40,14 +40,16 @@ df = prepare_returns('eth')
 df.loc[:, 'diff'] = eth - btc
 
 
+def make_lag(cols):
+    for i in range(1, cols):
+        df.loc[:, 'log_ret{}'.format(i)] = np.log(df.close.shift(i-1)) - np.log(df.close.shift(i))
+    df[['prev{}'.format(i) for i in range(1,cols)]] = df.shift(1).loc[:, 
+        ['log_ret{}'.format(i) for i in range(1, cols)]]
 
-df.loc[:, 'log_ret'] = np.log(df.close) - np.log(df.close.shift(1))
-df.loc[:, 'log_ret2'] = np.log(df.close) - np.log(df.close.shift(2))
-df.loc[:, 'log_ret3'] = np.log(df.close) - np.log(df.close.shift(3))
-df.loc[:, 'log_ret4'] = np.log(df.close) - np.log(df.close.shift(4))
-df.loc[:, 'log_ret5'] = np.log(df.close) - np.log(df.close.shift(5))
-df.loc[:, 'minmax'] = df.high/df.low
-df[['prev2', 'prev3', 'prev4', 'prev5']] = df.shift(1).loc[:, ['log_ret2', 'log_ret3', 'log_ret4', 'log_ret5']]
+make_lag(10)
+
+#df.loc[:, 'minmax'] = df.high/df.low
+
 
 df.dropna(inplace = True)
 
@@ -72,15 +74,15 @@ def calc_streak(df):
         else:
             streak += test
     return streak
-df['streak'] = df.apply(calc_streak, axis = 1)        
-X = df[['prev_ret1', 'prev2', 'prev3', 'prev4', 'prev5', 'diff', 'streak']]
+df['streak'] = df.apply(calc_streak, axis = 1)
+X = df[['prev_ret1', 'prev2', 'prev3', 'prev4','prev5', 'prev6', 'diff', 'streak']]
 
 
 y = df['log_ret']
 length = len(X)
 fut_returns = []
 for i in range(75,0,-1):
-    gb = xgb.XGBRegressor(max_depth = 2, n_estimators = 300, objective = 'reg:linear')
+    gb = xgb.XGBRegressor(max_depth = 2, n_estimators = 500, objective = 'reg:linear')
     x_train = X.iloc[:-i, :].values
     y_train = y.iloc[:-i].values
     x_test = X.iloc[length - i,:].values
